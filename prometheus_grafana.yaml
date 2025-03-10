@@ -20,22 +20,32 @@
             kubernetes.io/hostname: "worker1"
 
           alertmanager:
+            enabled: true
             nodeSelector:
               kubernetes.io/hostname: "worker1"
 
           grafana:
+            enabled: true
             nodeSelector:
               kubernetes.io/hostname: "worker1"
 
           prometheus:
+            enabled: true
             nodeSelector:
               kubernetes.io/hostname: "worker1"
 
           prometheusOperator:
+            enabled: true
             nodeSelector:
               kubernetes.io/hostname: "worker1"
 
           kubeStateMetrics:
+            enabled: true
+            nodeSelector:
+              kubernetes.io/hostname: "worker1"
+
+          nodeExporter:
+            enabled: true
             nodeSelector:
               kubernetes.io/hostname: "worker1"
 
