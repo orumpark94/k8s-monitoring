@@ -76,3 +76,4 @@
         /usr/local/bin/helm upgrade --install prometheus prometheus-community/kube-prometheus-stack
         --namespace monitoring
         --values /tmp/prometheus_values.yaml --force
+
