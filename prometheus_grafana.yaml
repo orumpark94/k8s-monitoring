@@ -12,7 +12,7 @@
       command: kubectl create namespace monitoring
       ignore_errors: yes
 
-    - name: Create custom values.yaml for nodeSelector
+    - name: Create custom values.yaml for nodeSelector and affinity
       copy:
         dest: /tmp/prometheus_values.yaml
         content: |
@@ -23,6 +23,15 @@
             enabled: true
             nodeSelector:
               kubernetes.io/hostname: "worker1"
+            affinity:
+              nodeAffinity:
+                requiredDuringSchedulingIgnoredDuringExecution:
+                  nodeSelectorTerms:
+                  - matchExpressions:
+                    - key: kubernetes.io/hostname
+                      operator: In
+                      values:
+                      - worker1
 
           grafana:
             enabled: true
@@ -33,6 +42,15 @@
             enabled: true
             nodeSelector:
               kubernetes.io/hostname: "worker1"
+            affinity:
+              nodeAffinity:
+                requiredDuringSchedulingIgnoredDuringExecution:
+                  nodeSelectorTerms:
+                  - matchExpressions:
+                    - key: kubernetes.io/hostname
+                      operator: In
+                      values:
+                      - worker1
 
           prometheusOperator:
             enabled: true
