@@ -1,0 +1,21 @@
+name: Deploy Prometheus & Grafana
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Run Ansible Playbook for Helm Install
+        run: |
+          ansible-playbook -i inventory helm_install.yaml -vv
+
+      - name: Run Ansible Playbook for Prometheus & Grafana
+        run: |
+          ansible-playbook -i inventory prometheus_grafana.yaml -vv

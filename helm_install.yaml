@@ -1,0 +1,28 @@
+---
+- name: Install Helm on Kubernetes Master
+  hosts: master
+  become: yes
+  tasks:
+    - name: Download Helm binary
+      get_url:
+        url: "https://get.helm.sh/helm-v3.14.0-linux-amd64.tar.gz"
+        dest: "/tmp/helm.tar.gz"
+
+    - name: Extract Helm
+      unarchive:
+        src: "/tmp/helm.tar.gz"
+        dest: "/tmp"
+        remote_src: yes
+
+    - name: Move Helm binary to /usr/local/bin
+      command: mv /tmp/linux-amd64/helm /usr/local/bin/helm
+      args:
+        creates: "/usr/local/bin/helm"
+
+    - name: Verify Helm installation
+      command: helm version
+      register: helm_version
+
+    - name: Show Helm version
+      debug:
+        msg: "{{ helm_version.stdout }}"
