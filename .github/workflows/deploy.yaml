@@ -14,8 +14,8 @@ jobs:
 
       - name: Run Ansible Playbook for Helm Install
         run: |
-          ansible-playbook -i /k8s-monitoring/inventory helm_install.yaml -vv
+          ansible-playbook -i inventory.ini helm_install.yaml -vv
 
       - name: Run Ansible Playbook for Prometheus & Grafana
         run: |
-          ansible-playbook -i /k8s-monitoring/inventory prometheus_grafana.yaml -vv
+          ansible-playbook -i inventory.ini prometheus_grafana.yaml -vv
