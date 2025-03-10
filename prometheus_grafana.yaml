@@ -1,13 +1,12 @@
----
 - name: Deploy Prometheus and Grafana on Worker1
   hosts: master
   become: yes
   tasks:
     - name: Add Prometheus Helm repository
-      command: helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+      command: /usr/local/bin/helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
 
     - name: Update Helm repositories
-      command: helm repo update
+      command: /usr/local/bin/helm repo update
 
     - name: Create monitoring namespace
       command: kubectl create namespace monitoring
@@ -22,6 +21,6 @@
 
     - name: Install Prometheus & Grafana on Worker1
       command: >
-        helm install prometheus prometheus-community/kube-prometheus-stack
+        /usr/local/bin/helm install prometheus prometheus-community/kube-prometheus-stack
         --namespace monitoring
         --values /tmp/prometheus_values.yaml
