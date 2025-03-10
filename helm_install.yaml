@@ -3,25 +3,40 @@
   hosts: master
   become: yes
   tasks:
+    - name: Check if Helm is already installed
+      stat:
+        path: /usr/local/bin/helm
+      register: helm_binary
+
     - name: Download Helm binary
       get_url:
         url: "https://get.helm.sh/helm-v3.14.0-linux-amd64.tar.gz"
         dest: "/tmp/helm.tar.gz"
+      when: not helm_binary.stat.exists
 
     - name: Extract Helm
       unarchive:
         src: "/tmp/helm.tar.gz"
         dest: "/tmp"
         remote_src: yes
+      when: not helm_binary.stat.exists
 
     - name: Move Helm binary to /usr/local/bin
       command: mv /tmp/linux-amd64/helm /usr/local/bin/helm
       args:
         creates: "/usr/local/bin/helm"
+      when: not helm_binary.stat.exists
+
+    - name: Ensure Helm binary is executable
+      file:
+        path: /usr/local/bin/helm
+        mode: '0755'
 
     - name: Verify Helm installation
-      command: helm version
+      command: /usr/local/bin/helm version
       register: helm_version
+      environment:
+        PATH: "/usr/local/bin:{{ ansible_env.PATH }}"
 
     - name: Show Helm version
       debug:
