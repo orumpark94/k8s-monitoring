@@ -67,8 +67,12 @@
             nodeSelector:
               kubernetes.io/hostname: "worker1"
 
-    - name: Install Prometheus & Grafana on Worker1
+    - name: Force uninstall Prometheus before reinstallation
+      command: helm uninstall prometheus -n monitoring
+      ignore_errors: yes
+
+    - name: Install Prometheus & Grafana on Worker1 with forced update
       command: >
         /usr/local/bin/helm upgrade --install prometheus prometheus-community/kube-prometheus-stack
         --namespace monitoring
-        --values /tmp/prometheus_values.yaml
+        --values /tmp/prometheus_values.yaml --force
