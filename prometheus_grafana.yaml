@@ -37,21 +37,14 @@
       copy:
         dest: /tmp/prometheus_values.yaml
         content: |
-          nodeSelector:
-            kubernetes.io/hostname: "worker1"
-
           alertmanager:
             enabled: true
-            nodeSelector:
-              kubernetes.io/hostname: "worker1"
             service:
               type: NodePort
               nodePort: 30903
 
           grafana:
             enabled: true
-            nodeSelector:
-              kubernetes.io/hostname: "worker1"
             service:
               type: NodePort
               nodePort: 30030
@@ -63,8 +56,6 @@
 
           prometheus:
             enabled: true
-            nodeSelector:
-              kubernetes.io/hostname: "worker1"
             prometheusSpec:
               serviceMonitorSelector: {}
               serviceMonitorNamespaceSelector: {}
@@ -82,13 +73,9 @@
 
           prometheusOperator:
             enabled: true
-            nodeSelector:
-              kubernetes.io/hostname: "worker1"
 
           kubeStateMetrics:
             enabled: true
-            nodeSelector:
-              kubernetes.io/hostname: "worker1"
 
           nodeExporter:
             enabled: true
