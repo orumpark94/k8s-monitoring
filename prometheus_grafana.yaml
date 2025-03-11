@@ -67,10 +67,9 @@
                       - worker1
             prometheusSpec:
               alertingEndpoints:
-                - static_configs:
-                  - targets:
-                    - "{{ alertmanager_ip_before.stdout }}"   # Alertmanager ClusterIP 자동 참조
-                  scheme: "http"
+                - name: "alertmanager"
+                  namespace: "monitoring"
+                  port: 9093
 
           prometheusOperator:
             enabled: true
