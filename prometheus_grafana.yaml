@@ -17,13 +17,7 @@
       args:
         executable: /bin/bash
 
-    - name: Get current Alertmanager Service ClusterIP
-      shell: |
-        kubectl get svc -n monitoring prometheus-kube-prometheus-alertmanager -o jsonpath='{.spec.clusterIP}' 2>/dev/null || echo "NOT_FOUND"
-      register: alertmanager_ip_before
-      changed_when: false
-
-    - name: Create custom values.yaml for Prometheus & Alertmanager
+    - name: Create custom values.yaml for Prometheus & Grafana
       copy:
         dest: /tmp/prometheus_values.yaml
         content: |
@@ -44,13 +38,21 @@
                       values:
                       - worker1
             service:
-              type: ClusterIP
-              port: 9093
+              type: NodePort
+              nodePort: 30903
 
           grafana:
             enabled: true
             nodeSelector:
               kubernetes.io/hostname: "worker1"
+            service:
+              type: NodePort
+              nodePort: 30030
+            grafana.ini:
+              server:
+                root_url: "http://worker1:30030"
+              auth:
+                disable_signout_menu: true
 
           prometheus:
             enabled: true
@@ -66,15 +68,23 @@
                       values:
                       - worker1
             prometheusSpec:
-              alertingEndpoints:
-                - name: "alertmanager"
-                  namespace: "monitoring"
-                  port: 9093
+              serviceMonitorSelector: {}
+              serviceMonitorNamespaceSelector: {}
+              storageSpec:
+                volumeClaimTemplate:
+                  spec:
+                    accessModes: ["ReadWriteOnce"]
+                    resources:
+                      requests:
+                        storage: 10Gi
+              service:
+                type: NodePort
+                nodePort: 30090
 
           prometheusOperator:
             enabled: true
             nodeSelector:
-              kubernetes.io/hostname: "master"  # Prometheus Operator는 마스터에서 실행
+              kubernetes.io/hostname: "master"
 
           kubeStateMetrics:
             enabled: true
@@ -83,14 +93,30 @@
 
           nodeExporter:
             enabled: true
-            nodeSelector:
-              kubernetes.io/hostname: "worker1"
+            tolerations:
+              - key: "node-role.kubernetes.io/master"
+                operator: "Exists"
+                effect: "NoSchedule"
 
     - name: Deploy or Update Prometheus & Grafana using Helm
       command: >
         /usr/local/bin/helm upgrade --install prometheus prometheus-community/kube-prometheus-stack
         --namespace monitoring
-        --values /tmp/prometheus_values.yaml --force --wait --timeout 100s
+        --values /tmp/prometheus_values.yaml --force --timeout 300s
+      changed_when: true
+
+    - name: Wait for Alertmanager Service to be created
+      shell: |
+        until kubectl get svc -n monitoring prometheus-kube-prometheus-alertmanager -o jsonpath='{.spec.clusterIP}'; do
+          echo "Waiting for Alertmanager Service..."
+          sleep 5
+        done
+      register: alertmanager_ip_after
+      changed_when: false
+
+    - name: Restart Prometheus Pods to Apply New Config
+      command: kubectl rollout restart statefulset -n monitoring prometheus-prometheus-kube-prometheus-prometheus
+      ignore_errors: yes
       changed_when: true
 
     - name: Check Prometheus & Grafana Pod status
@@ -111,24 +137,12 @@
       debug:
         msg: "{{ helm_status.stdout_lines }}"
 
-    - name: Get updated Alertmanager Service ClusterIP
-      shell: |
-        kubectl get svc -n monitoring prometheus-kube-prometheus-alertmanager -o jsonpath='{.spec.clusterIP}'
-      register: alertmanager_ip_after
-      changed_when: false
-
-    - name: Restart Prometheus Pods to Apply New Config
-      command: kubectl rollout restart statefulset -n monitoring prometheus-prometheus-kube-prometheus-prometheus
-      ignore_errors: yes
-      changed_when: true
-
     - name: Verify Prometheus Alertmanager Configuration
       shell: |
         kubectl get prometheus -n monitoring prometheus-kube-prometheus-prometheus -o json | jq '.spec.alerting.alertmanagers'
       register: prometheus_alert_config
       changed_when: false
 
-    - name: Display Alertmanager IP before and after deployment
+    - name: Display Alertmanager IP after deployment
       debug:
-        msg: "Alertmanager IP Before: {{ alertmanager_ip_before.stdout }}, After: {{ alertmanager_ip_after.stdout }}. Prometheus Config: {{ prometheus_alert_config.stdout }}"
-
+        msg: "Alertmanager IP After: {{ alertmanager_ip_after.stdout }}. Prometheus Config: {{ prometheus_alert_config.stdout }}"
