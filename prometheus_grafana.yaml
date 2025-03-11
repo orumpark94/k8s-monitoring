@@ -35,16 +35,7 @@
       when: storageclass_check.stdout == ""
       changed_when: false
 
-    # 3️⃣ PV 적용 전, Worker1 노드에 /mnt/data/prometheus 디렉토리 생성 및 권한 부여
-    - name: Ensure /mnt/data/prometheus directory exists on worker1
-      delegate_to: worker1
-      become: yes
-      shell: |
-        mkdir -p /mnt/data/prometheus
-        chmod 777 /mnt/data/prometheus
-      changed_when: false
-
-    # 4️⃣ PersistentVolume (PV) 자동 생성 (노드 지정)
+    # 3️⃣ PersistentVolume (PV) 자동 생성 (노드 지정)
     - name: Check if PV exists
       shell: kubectl get pv | grep prometheus-pv || true
       register: pv_check
@@ -83,7 +74,7 @@
       when: pv_check.stdout == ""
       changed_when: false
 
-    # 5️⃣ PVC 상태 확인 (삭제 없이 유지)
+    # 4️⃣ PVC 상태 확인 (삭제 없이 유지)
     - name: Check if Prometheus PVC exists
       shell: kubectl get pvc -n monitoring | grep prometheus-prometheus-kube-prometheus-prometheus-db || true
       register: pvc_check
@@ -98,7 +89,7 @@
       when: pvc_check.stdout != ""
       changed_when: false
 
-    # 6️⃣ Prometheus & Grafana 배포 (기존 PVC 유지)
+    # 5️⃣ Prometheus & Grafana 배포 (기존 PVC 유지)
     - name: Deploy or Update Prometheus & Grafana using Helm
       command: >
         /usr/local/bin/helm upgrade --install prometheus prometheus-community/kube-prometheus-stack
@@ -110,5 +101,3 @@
         --set alertmanager.service.nodePort=30903 --set alertmanager.service.type=NodePort
         --wait --timeout 600s
       changed_when: true
-
-
