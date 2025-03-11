@@ -84,7 +84,7 @@
           prometheusOperator:
             enabled: true
             nodeSelector:
-              kubernetes.io/hostname: "master"
+              kubernetes.io/hostname: "worker1"
 
           kubeStateMetrics:
             enabled: true
