@@ -90,8 +90,26 @@
       command: >
         /usr/local/bin/helm upgrade --install prometheus prometheus-community/kube-prometheus-stack
         --namespace monitoring
-        --values /tmp/prometheus_values.yaml --force --wait
+        --values /tmp/prometheus_values.yaml --force --wait --timeout 100s
       changed_when: true
+
+    - name: Check Prometheus & Grafana Pod status
+      shell: kubectl get pods -n monitoring
+      register: pod_status
+      changed_when: false
+
+    - name: Display pod status
+      debug:
+        msg: "{{ pod_status.stdout_lines }}"
+
+    - name: Check Helm release status
+      shell: /usr/local/bin/helm list -n monitoring
+      register: helm_status
+      changed_when: false
+
+    - name: Display Helm status
+      debug:
+        msg: "{{ helm_status.stdout_lines }}"
 
     - name: Get updated Alertmanager Service ClusterIP
       shell: |
