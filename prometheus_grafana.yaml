@@ -35,7 +35,46 @@
       when: storageclass_check.stdout == ""
       changed_when: false
 
-    # 3️⃣ PVC 상태 확인 (삭제 없이 유지)
+    # 3️⃣ PersistentVolume (PV) 자동 생성 (노드 지정)
+    - name: Check if PV exists
+      shell: kubectl get pv | grep prometheus-pv || true
+      register: pv_check
+      changed_when: false
+
+    - name: Create PersistentVolume for Prometheus
+      copy:
+        dest: /tmp/prometheus-pv.yaml
+        content: |
+          apiVersion: v1
+          kind: PersistentVolume
+          metadata:
+            name: prometheus-pv
+          spec:
+            capacity:
+              storage: 10Gi
+            accessModes:
+              - ReadWriteOnce
+            persistentVolumeReclaimPolicy: Retain
+            storageClassName: local-storage
+            local:
+              path: /mnt/data/prometheus
+            nodeAffinity:
+              required:
+                nodeSelectorTerms:
+                  - matchExpressions:
+                      - key: kubernetes.io/hostname
+                        operator: In
+                        values:
+                          - worker1  # Prometheus를 배포할 노드 지정
+      when: pv_check.stdout == ""
+      changed_when: false
+
+    - name: Apply PersistentVolume (Only if not exists)
+      command: kubectl apply -f /tmp/prometheus-pv.yaml
+      when: pv_check.stdout == ""
+      changed_when: false
+
+    # 4️⃣ PVC 상태 확인 (삭제 없이 유지)
     - name: Check if Prometheus PVC exists
       shell: kubectl get pvc -n monitoring | grep prometheus-prometheus-kube-prometheus-prometheus-db || true
       register: pvc_check
@@ -50,7 +89,7 @@
       when: pvc_check.stdout != ""
       changed_when: false
 
-    # 4️⃣ Prometheus & Grafana 배포 (기존 PVC 유지)
+    # 5️⃣ Prometheus & Grafana 배포 (기존 PVC 유지)
     - name: Deploy or Update Prometheus & Grafana using Helm
       command: >
         /usr/local/bin/helm upgrade --install prometheus prometheus-community/kube-prometheus-stack
@@ -62,38 +101,3 @@
         --set alertmanager.service.nodePort=30903 --set alertmanager.service.type=NodePort
         --wait --timeout 600s
       changed_when: true
-
-    # 5️⃣ 배포된 리소스 확인
-    - name: Wait for Prometheus & Grafana Pods to be ready
-      shell: |
-        kubectl rollout status statefulset prometheus-prometheus-kube-prometheus-prometheus -n monitoring
-      changed_when: false
-      ignore_errors: yes
-
-    - name: Wait for Alertmanager Service to be created
-      shell: |
-        until kubectl get svc -n monitoring prometheus-kube-prometheus-alertmanager -o jsonpath='{.spec.clusterIP}'; do
-          echo "Waiting for Alertmanager Service..."
-          sleep 5
-        done
-      register: alertmanager_ip_after
-      changed_when: false
-
-    # 6️⃣ 상태 점검 및 결과 출력
-    - name: Check Prometheus & Grafana Pod status
-      shell: kubectl get pods -n monitoring -o wide
-      register: pod_status
-      changed_when: false
-
-    - name: Display pod status
-      debug:
-        msg: "{{ pod_status.stdout_lines }}"
-
-    - name: Check Helm release status
-      shell: /usr/local/bin/helm list -n monitoring
-      register: helm_status
-      changed_when: false
-
-    - name: Display Helm status
-      debug:
-        msg: "{{ helm_status.stdout_lines }}"
