@@ -2,6 +2,7 @@
   hosts: master
   become: yes
   tasks:
+    # 1️⃣ Helm Chart 추가 및 업데이트
     - name: Add Prometheus Helm repository
       command: /usr/local/bin/helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
       changed_when: false
@@ -10,14 +11,13 @@
       command: /usr/local/bin/helm repo update
       changed_when: false
 
-    - name: Ensure monitoring namespace exists
-      shell: |
-        kubectl get namespace monitoring || kubectl create namespace monitoring
+    # 2️⃣ StorageClass 존재 여부 확인 후 생성 (삭제 없음)
+    - name: Check if StorageClass exists
+      shell: kubectl get storageclass local-storage --no-headers --ignore-not-found
+      register: storageclass_check
       changed_when: false
-      args:
-        executable: /bin/bash
 
-    - name: Create StorageClass for local storage
+    - name: Create StorageClass if not exists
       copy:
         dest: /tmp/storageclass.yaml
         content: |
@@ -27,27 +27,48 @@
             name: local-storage
           provisioner: kubernetes.io/no-provisioner
           volumeBindingMode: Immediate
+      when: storageclass_check.stdout == ""
       changed_when: false
 
-    - name: Apply StorageClass
+    - name: Apply StorageClass (Only if not exists)
       command: kubectl apply -f /tmp/storageclass.yaml
+      when: storageclass_check.stdout == ""
       changed_when: false
 
-    - name: Wait for StorageClass to be available
+    # 3️⃣ PVC 상태 확인 (삭제 없이 유지)
+    - name: Check if Prometheus PVC exists
+      shell: kubectl get pvc -n monitoring | grep prometheus-prometheus-kube-prometheus-prometheus-db || true
+      register: pvc_check
+      changed_when: false
+
+    - name: Wait for existing PVC to be Bound (if exists)
       shell: |
-        until kubectl get storageclass local-storage; do
-          echo "Waiting for StorageClass to be available..."
+        until kubectl get pvc -n monitoring | grep prometheus-prometheus-kube-prometheus-prometheus-db | grep Bound; do
+          echo "Waiting for existing PVC to be bound..."
           sleep 5
         done
+      when: pvc_check.stdout != ""
       changed_when: false
 
+    # 4️⃣ Prometheus & Grafana 배포 (기존 PVC 유지)
     - name: Deploy or Update Prometheus & Grafana using Helm
       command: >
         /usr/local/bin/helm upgrade --install prometheus prometheus-community/kube-prometheus-stack
         --namespace monitoring --create-namespace
         --set prometheus.prometheusSpec.storageSpec.volumeClaimTemplate.spec.storageClassName="local-storage"
-        --timeout 300s
+        --set prometheus.prometheusSpec.storageSpec.volumeClaimTemplate.spec.resources.requests.storage="10Gi"
+        --set prometheus.service.nodePort=30090 --set prometheus.service.type=NodePort
+        --set grafana.service.nodePort=30030 --set grafana.service.type=NodePort
+        --set alertmanager.service.nodePort=30903 --set alertmanager.service.type=NodePort
+        --wait --timeout 600s
       changed_when: true
+
+    # 5️⃣ 배포된 리소스 확인
+    - name: Wait for Prometheus & Grafana Pods to be ready
+      shell: |
+        kubectl rollout status statefulset prometheus-prometheus-kube-prometheus-prometheus -n monitoring
+      changed_when: false
+      ignore_errors: yes
 
     - name: Wait for Alertmanager Service to be created
       shell: |
@@ -58,8 +79,9 @@
       register: alertmanager_ip_after
       changed_when: false
 
+    # 6️⃣ 상태 점검 및 결과 출력
     - name: Check Prometheus & Grafana Pod status
-      shell: kubectl get pods -n monitoring
+      shell: kubectl get pods -n monitoring -o wide
       register: pod_status
       changed_when: false
 
@@ -75,4 +97,3 @@
     - name: Display Helm status
       debug:
         msg: "{{ helm_status.stdout_lines }}"
-
