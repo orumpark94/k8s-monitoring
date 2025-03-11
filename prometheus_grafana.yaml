@@ -104,19 +104,6 @@
         --values /tmp/prometheus_values.yaml --force --timeout 300s
       changed_when: true
 
-    - name: Wait for Prometheus PVC to be bound
-      shell: |
-        until kubectl get pvc -n monitoring prometheus-prometheus-kube-prometheus-prometheus-db-prometheus-prometheus-kube-prometheus-prometheus-0 -o jsonpath='{.status.phase}' | grep -q "Bound"; do
-          echo "Waiting for PVC to be bound..."
-          sleep 5
-        done
-      register: pvc_status
-      changed_when: false
-
-    - name: Display PVC Status
-      debug:
-        msg: "PVC Status: {{ pvc_status.stdout }}"
-
     - name: Wait for Alertmanager Service to be created
       shell: |
         until kubectl get svc -n monitoring prometheus-kube-prometheus-alertmanager -o jsonpath='{.spec.clusterIP}'; do
@@ -143,13 +130,3 @@
     - name: Display Helm status
       debug:
         msg: "{{ helm_status.stdout_lines }}"
-
-    - name: Verify Prometheus Alertmanager Configuration
-      shell: |
-        kubectl get prometheus -n monitoring prometheus-kube-prometheus-prometheus -o json | jq '.spec.alerting.alertmanagers'
-      register: prometheus_alert_config
-      changed_when: false
-
-    - name: Display Alertmanager IP after deployment
-      debug:
-        msg: "Alertmanager IP After: {{ alertmanager_ip_after.stdout }}. Prometheus Config: {{ prometheus_alert_config.stdout }}"
