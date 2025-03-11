@@ -17,6 +17,22 @@
       args:
         executable: /bin/bash
 
+    - name: Create StorageClass for local storage
+      copy:
+        dest: /tmp/storageclass.yaml
+        content: |
+          apiVersion: storage.k8s.io/v1
+          kind: StorageClass
+          metadata:
+            name: local-storage
+          provisioner: kubernetes.io/no-provisioner
+          volumeBindingMode: WaitForFirstConsumer
+      changed_when: false
+
+    - name: Apply StorageClass
+      command: kubectl apply -f /tmp/storageclass.yaml
+      changed_when: false
+
     - name: Create custom values.yaml for Prometheus & Grafana
       copy:
         dest: /tmp/prometheus_values.yaml
@@ -28,15 +44,6 @@
             enabled: true
             nodeSelector:
               kubernetes.io/hostname: "worker1"
-            affinity:
-              nodeAffinity:
-                requiredDuringSchedulingIgnoredDuringExecution:
-                  nodeSelectorTerms:
-                  - matchExpressions:
-                    - key: kubernetes.io/hostname
-                      operator: In
-                      values:
-                      - worker1
             service:
               type: NodePort
               nodePort: 30903
@@ -58,21 +65,13 @@
             enabled: true
             nodeSelector:
               kubernetes.io/hostname: "worker1"
-            affinity:
-              nodeAffinity:
-                requiredDuringSchedulingIgnoredDuringExecution:
-                  nodeSelectorTerms:
-                  - matchExpressions:
-                    - key: kubernetes.io/hostname
-                      operator: In
-                      values:
-                      - worker1
             prometheusSpec:
               serviceMonitorSelector: {}
               serviceMonitorNamespaceSelector: {}
               storageSpec:
                 volumeClaimTemplate:
                   spec:
+                    storageClassName: "local-storage"  # ✅ PVC가 사용할 StorageClass 지정
                     accessModes: ["ReadWriteOnce"]
                     resources:
                       requests:
@@ -105,6 +104,19 @@
         --values /tmp/prometheus_values.yaml --force --timeout 300s
       changed_when: true
 
+    - name: Wait for Prometheus PVC to be bound
+      shell: |
+        until kubectl get pvc -n monitoring prometheus-prometheus-kube-prometheus-prometheus-db-prometheus-prometheus-kube-prometheus-prometheus-0 -o jsonpath='{.status.phase}' | grep -q "Bound"; do
+          echo "Waiting for PVC to be bound..."
+          sleep 5
+        done
+      register: pvc_status
+      changed_when: false
+
+    - name: Display PVC Status
+      debug:
+        msg: "PVC Status: {{ pvc_status.stdout }}"
+
     - name: Wait for Alertmanager Service to be created
       shell: |
         until kubectl get svc -n monitoring prometheus-kube-prometheus-alertmanager -o jsonpath='{.spec.clusterIP}'; do
@@ -113,11 +125,6 @@
         done
       register: alertmanager_ip_after
       changed_when: false
-
-    - name: Restart Prometheus Pods to Apply New Config
-      command: kubectl rollout restart statefulset -n monitoring prometheus-prometheus-kube-prometheus-prometheus
-      ignore_errors: yes
-      changed_when: true
 
     - name: Check Prometheus & Grafana Pod status
       shell: kubectl get pods -n monitoring
