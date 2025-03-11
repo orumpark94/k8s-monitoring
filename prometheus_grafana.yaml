@@ -11,8 +11,11 @@
       changed_when: false
 
     - name: Ensure monitoring namespace exists
-      command: kubectl create namespace monitoring --dry-run=client -o yaml | kubectl apply -f -
+      shell: |
+        kubectl get namespace monitoring || kubectl create namespace monitoring
       changed_when: false
+      args:
+        executable: /bin/bash
 
     - name: Get current Alertmanager Service ClusterIP
       shell: |
