@@ -131,3 +131,4 @@
     - name: Display Alertmanager IP before and after deployment
       debug:
         msg: "Alertmanager IP Before: {{ alertmanager_ip_before.stdout }}, After: {{ alertmanager_ip_after.stdout }}. Prometheus Config: {{ prometheus_alert_config.stdout }}"
+
