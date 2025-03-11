@@ -75,3 +75,4 @@
     - name: Display Helm status
       debug:
         msg: "{{ helm_status.stdout_lines }}"
+
