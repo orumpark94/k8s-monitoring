@@ -89,11 +89,13 @@
       when: pvc_check.stdout != ""
       changed_when: false
 
-    # 5️⃣ Prometheus & Grafana 배포 (기존 PVC 유지)
+    # 5️⃣ Prometheus & Grafana 배포 (기존 PVC 유지 및 additionalScrapeConfigs 추가)
     - name: Deploy or Update Prometheus & Grafana using Helm
       command: >
         /usr/local/bin/helm upgrade --install prometheus prometheus-community/kube-prometheus-stack
         --namespace monitoring --create-namespace
+        --set prometheus.prometheusSpec.additionalScrapeConfigs[0].job_name="kube-state-metrics"
+        --set prometheus.prometheusSpec.additionalScrapeConfigs[0].static_configs[0].targets[0]="prometheus-kube-state-metrics.monitoring.svc.cluster.local:8080"
         --set prometheus.prometheusSpec.storageSpec.volumeClaimTemplate.spec.storageClassName="local-storage"
         --set prometheus.prometheusSpec.storageSpec.volumeClaimTemplate.spec.resources.requests.storage="10Gi"
         --set prometheus.service.nodePort=30090 --set prometheus.service.type=NodePort
