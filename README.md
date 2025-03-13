@@ -58,3 +58,6 @@ Prometheus 쿼리 실행 및 Grafana 노드 리소스 확인 (CPU 리소스 확�
 1.Helm chart를 이용해서 배포를 진행한다면, 배포의 난이도는 낮아지나 기본적으로 chart를 기반으로 배포되기에 커스터마이징이 어렵다.
 helm update 및 configmap 적용 불가 → 해결방안: helm chart로 배포시에 원하는 커스터마이징 설정을 넣어 놓고 배포를 시작해야합니다.
 
+2.Helm chart로 배포시 kubectl로 pod 및 cluster에 대한 설정 변경은 적절하지 않습니다.
+
+
