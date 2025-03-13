@@ -44,7 +44,7 @@ k8s cluster의 구성은 ( 1 master node 2 worker node 구성이며, 연결은 S
 ![image](https://github.com/user-attachments/assets/c624449e-3cec-4591-9740-55e68142a1e6)
 
 
-4.결과
+# 결과
 
 Prometheus 쿼리 실행 및 Grafana 노드 리소스 확인 (CPU 리소스 확인)
 
