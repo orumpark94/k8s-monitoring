@@ -26,3 +26,5 @@ playbook 구성하여 실행
 
 ![image](https://github.com/user-attachments/assets/d8428964-c234-4080-aea4-8484b8a34880)
 
+3. 
+
