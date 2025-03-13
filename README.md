@@ -43,3 +43,18 @@ k8s cluster의 구성은 ( 1 master node 2 worker node 구성이며, 연결은 S
 
 ![image](https://github.com/user-attachments/assets/c624449e-3cec-4591-9740-55e68142a1e6)
 
+
+4.결과
+
+Prometheus 쿼리 실행 및 Grafana 노드 리소스 확인 (CPU 리소스 확인)
+
+![image](https://github.com/user-attachments/assets/47f2138e-33b0-44df-b421-37308343c60e)
+
+![image](https://github.com/user-attachments/assets/acdee636-13f7-4d32-87ff-e316995de48c)
+
+
+# 주의사항 및 구성시 에로사항
+
+1.Helm chart를 이용해서 배포를 진행한다면, 배포의 난이도는 낮아지나 기본적으로 chart를 기반으로 배포되기에 커스터마이징이 어렵다.
+helm update 및 configmap 적용 불가 → 해결방안: helm chart로 배포시에 원하는 커스터마이징 설정을 넣어 놓고 배포를 시작해야합니다.
+
