@@ -31,3 +31,8 @@ playbook 구성하여 실행
 
 3.Prometheus 및 Grafana 서비스 확인
 
+![image](https://github.com/user-attachments/assets/2e1b3607-b498-434a-8d48-178383823388)
+
+k8s에서 사용된 CNI 는 flannel을 사용하였습니다.
+k8s cluster의 구성은 ( 1 master node 2 worker node 구성이며, 연결은 SSH를 이용하여 연결하였습니다 )
+ 
